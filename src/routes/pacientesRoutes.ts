@@ -1,5 +1,5 @@
-import { Router } from 'express';
-
+import { Router, type Router as RouterType } from "express";
+const router: RouterType = Router();
 import {
     crearPaciente,
     listarPacientes,
@@ -7,8 +7,6 @@ import {
     actualizarPaciente,
     eliminarPaciente
 } from "../controllers/pacientesController";
-
-const router: Router = Router();
 
 router.post("/pacientes", crearPaciente);
 router.get("/pacientes", listarPacientes);
