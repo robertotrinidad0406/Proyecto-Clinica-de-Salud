@@ -1,50 +1,102 @@
-import prisma from "../db/prisma";
+import prisma from "../db/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 
-type DatosMedico = {
+type DatosCrearMedico = {
     NumeroLicencia: string;
-    userId: number;
-    EspecialidadId: number;
-}
+    usuario: {
+        nombre: string;
+        apellido: string;
+        email?: string | null;
+        contrasena: string;
+        telefono: string;
+    };
+    especialidad: {
+        nombre: string;
+        descripcion?: string | null;
+    };
+};
 
-type DatosActualizarMedico = Partial<DatosMedico>
+type DatosActualizarMedico = {
+    NumeroLicencia?: string;
+    userId?: number;
+    EspecialidadId?: number;
+};
 
-export const crearMedicoModel = async (data: DatosMedico) => {
-    return await prisma.medico.create({
-        data
+const medicoDetalle = {
+    user: {
+        select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            telefono: true,
+            rol: true,
+            createAt: true,
+            updatedAt: true
+        }
+    },
+    especialidad: true
+} satisfies Prisma.MedicoInclude;
+
+export const crearMedicoModel = async (data: DatosCrearMedico) => {
+    return prisma.$transaction(async (tx) => {
+        const especialidad = await tx.especialidad.upsert({
+            where: { nombre: data.especialidad.nombre },
+            update: {},
+            create: {
+                nombre: data.especialidad.nombre,
+                descripcion: data.especialidad.descripcion ?? null
+            }
+        });
+
+        const user = await tx.users.create({
+            data: {
+                nombre: data.usuario.nombre,
+                apellido: data.usuario.apellido,
+                email: data.usuario.email ?? null,
+                contrasena: data.usuario.contrasena,
+                telefono: data.usuario.telefono,
+                rol: "medico"
+            }
+        });
+
+        return tx.medico.create({
+            data: {
+                NumeroLicencia: data.NumeroLicencia,
+                userId: user.id,
+                EspecialidadId: especialidad.id
+            },
+            include: medicoDetalle
+        });
     });
 }
 
 export const listarMedicosModel = async () => {
-    return await prisma.medico.findMany({
-        include: {
-            user: true,
-            especialidad: true
-        }
-    })
+    return prisma.medico.findMany({
+        include: medicoDetalle
+    });
 }
 
 export const obtenerMedicoModel = async (id: number) => {
-    return await prisma.medico.findUnique({
+    return prisma.medico.findUnique({
         where: { id },
-        include: {
-            user: true,
-            especialidad: true
-        }
-    })
+        include: medicoDetalle
+    });
 }
 
 export const actualizarMedicoModel = async (
     id: number,
     data: DatosActualizarMedico
 ) => {
-    return await prisma.medico.update({
+    return prisma.medico.update({
         where: { id },
-        data
-    })
+        data,
+        include: medicoDetalle
+    });
 }
 
 export const eliminarMedicoModel = async (id: number) => {
-    return await prisma.medico.delete({
+    return prisma.medico.delete({
         where: { id }
-    })
-}
+    });
+};

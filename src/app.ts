@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import pacientesRoutes from "./routes/pacientesRoutes.js";
+import medicoRoutes from "./routes/medicoRoutes.js";
 
 const app: express.Application = express();
 
@@ -15,5 +16,6 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/pacientes", pacientesRoutes);
+app.use("/api/medicos", medicoRoutes);
 
 export default app;
