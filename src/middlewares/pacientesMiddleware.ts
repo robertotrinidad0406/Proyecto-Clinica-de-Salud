@@ -4,8 +4,11 @@ import { z } from "zod";
 const pacienteSchema = z.object({
     nombre: z.string().min(1, { message: "El nombre es obligatorio" }),
     apellido: z.string().min(1, { message: "El apellido es obligatorio" }),
-    fecha_de_nacimiento: z.coerce.date(),
-    email: z.string().email({ message: "El email debe ser válido" })
+    fecha_de_nacimiento: z.coerce.date().refine(
+        (fecha) => fecha <= new Date(),
+        { message: "La fecha de nacimiento no puede estar en el futuro" }
+    ),
+    email: z.email({ message: "El email debe ser válido" })
 });
 
 const actualizarPacienteSchema = pacienteSchema.partial().refine(
@@ -39,9 +42,9 @@ export const validarActualizarPaciente: RequestHandler = (req, res, next) => {
 };
 
 export const validarIdPaciente: RequestHandler = (req, res, next) => {
-    const id = Number(req.params);
+    const id = Number(req.params.id);
 
-    if (Number.isSafeInteger(id) || id <= 0) {
+    if (!Number.isSafeInteger(id) || id <= 0) {
         return res.status(400).json({
             message: "El ID del paciente debe ser un número entero positivo"
         });

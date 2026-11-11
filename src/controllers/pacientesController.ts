@@ -45,7 +45,29 @@ export const obtenerPaciente = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const paciente = await prisma.pacientes.findUnique({
-            where: { id: Number(id) }
+            where: { id: Number(id) },
+            include: {
+                citas: {
+                    orderBy: [
+                        { fechaHora: "desc" },
+                        { estado: "asc" }
+                    ],
+                    include: {
+                        medico: {
+                            include: {
+                                user: {
+                                    select: {
+                                        id: true,
+                                        nombre: true,
+                                        apellido: true
+                                    }
+                                },
+                                especialidad: true
+                            }
+                        }
+                    }
+                }
+            }
         });
         if (!paciente) {
             return res.status(404).json({ message: 'Paciente no encontrado' });
@@ -68,14 +90,17 @@ export const actualizarPaciente = async (req: Request, res: Response) => {
             fecha_de_nacimiento,
             email
         } = req.body;
+        const data = {
+            ...(nombre !== undefined && { nombre }),
+            ...(apellido !== undefined && { apellido }),
+            ...(fecha_de_nacimiento !== undefined && {
+                fecha_de_nacimiento: new Date(fecha_de_nacimiento)
+            }),
+            ...(email !== undefined && { email })
+        };
         const pacienteActualizado = await prisma.pacientes.update({
             where: { id: Number(id) },
-            data: {
-                nombre,
-                apellido,
-                fecha_de_nacimiento: new Date(fecha_de_nacimiento),
-                email
-            }
+            data
         });
         return res.status(200).json({
             message: 'Paciente actualizado exitosamente',

@@ -42,9 +42,15 @@ export const crearMedico = async (req: Request, res: Response) => {
     }
 };
 
-export const listarMedicos = async (_req: Request, res: Response) => {
+export const listarMedicos = async (req: Request, res: Response) => {
     try {
-        const medicos = await listarMedicosModel();
+        const especialidad = typeof req.query.especialidad === "string"
+            ? req.query.especialidad.trim()
+            : undefined;
+        const ordenar = typeof req.query.ordenar === "string"
+            ? req.query.ordenar
+            : undefined;
+        const medicos = await listarMedicosModel(especialidad || undefined, ordenar);
         return res.status(200).json(medicos);
     } catch (error) {
         console.error("Error al listar médicos:", error);

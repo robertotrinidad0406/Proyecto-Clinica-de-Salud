@@ -38,6 +38,30 @@ const medicoDetalle = {
     especialidad: true
 } satisfies Prisma.MedicoInclude;
 
+const ordenesMedicos: Record<string, Prisma.MedicoOrderByWithRelationInput[]> = {
+    nombre_asc: [
+        { user: { apellido: "asc" } },
+        { user: { nombre: "asc" } },
+        { id: "asc" }
+    ],
+    nombre_desc: [
+        { user: { apellido: "desc" } },
+        { user: { nombre: "desc" } },
+        { id: "desc" }
+    ],
+    especialidad_asc: [
+        { especialidad: { nombre: "asc" } },
+        { user: { apellido: "asc" } },
+        { user: { nombre: "asc" } }
+    ],
+    especialidad_desc: [
+        { especialidad: { nombre: "desc" } },
+        { user: { apellido: "asc" } },
+        { user: { nombre: "asc" } }
+    ],
+    licencia_asc: [{ NumeroLicencia: "asc" }]
+};
+
 export const crearMedicoModel = async (data: DatosCrearMedico) => {
     return prisma.$transaction(async (tx) => {
         const especialidad = await tx.especialidad.upsert({
@@ -71,8 +95,28 @@ export const crearMedicoModel = async (data: DatosCrearMedico) => {
     });
 }
 
-export const listarMedicosModel = async () => {
+export const listarMedicosModel = async (
+    especialidad?: string,
+    ordenar?: string
+) => {
+    const especialidades = especialidad
+        ? await prisma.especialidad.findMany({
+            where: {
+                nombre: { contains: especialidad, mode: "insensitive" }
+            },
+            select: { id: true }
+        })
+        : undefined;
+
     return prisma.medico.findMany({
+        ...(especialidades
+            ? { where: { EspecialidadId: { in: especialidades.map(({ id }) => id) } } }
+            : {}),
+        orderBy: ordenesMedicos[ordenar ?? "nombre_asc"] ?? [
+            { user: { apellido: "asc" } },
+            { user: { nombre: "asc" } },
+            { id: "asc" }
+        ],
         include: medicoDetalle
     });
 }

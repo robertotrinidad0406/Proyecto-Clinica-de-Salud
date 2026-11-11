@@ -25,7 +25,7 @@ model Users {
   nombre     String
   apellido   String
   email      String?  @unique
-  contrasena String
+  contrasena String   @map("contraseña")
   telefono   String
   rol        Rol
   createAt   DateTime @default(now())
@@ -91,6 +91,7 @@ model Cita {
 
   @@index([PacientesId])
   @@index([medicoId, fechaHora])
+  @@unique([medicoId, fechaHora])
   @@index([fechaHora, estado])
   @@map("citas")
 }
