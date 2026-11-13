@@ -1,12 +1,12 @@
 import type { RequestHandler } from "express";
 import { z } from 'zod';
 
-const crearMedicoSchema = z.object({
+export const crearMedicoSchema = z.object({
     NumeroLicencia: z.string().trim().min(1, { message: "El número de licencia es obligatorio" }),
     usuario: z.object({
         nombre: z.string().trim().min(1, { message: "El nombre es obligatorio" }),
         apellido: z.string().trim().min(1, { message: "El apellido es obligatorio" }),
-        email: z.email().nullable().optional(),
+        email: z.email({ message: "El correo electrónico es obligatorio y debe ser válido" }),
         contrasena: z.string().min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
         telefono: z.string().trim().min(1, { message: "El teléfono es obligatorio" })
     }),

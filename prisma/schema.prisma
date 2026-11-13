@@ -91,7 +91,6 @@ model Cita {
 
   @@index([PacientesId])
   @@index([medicoId, fechaHora])
-  @@unique([medicoId, fechaHora])
   @@index([fechaHora, estado])
   @@map("citas")
 }

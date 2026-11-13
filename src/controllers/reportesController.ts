@@ -1,19 +1,12 @@
 import type { Request, Response } from "express";
-import prisma from "../db/prisma.js";
+import {
+    contarCitasDiariasModel,
+    contarCitasPorEspecialidadModel
+} from "../models/reportesModel.js";
 
 export const citasPorEspecialidad = async (_req: Request, res: Response) => {
     try {
-        const resultado = await prisma.$queryRaw<
-            { especialidad: string; totalCitas: number }[]
-        >`
-            SELECT e."nombre" AS "especialidad",
-                   COUNT(c."id")::int AS "totalCitas"
-            FROM "Especialidades" e
-            LEFT JOIN "medicos" m ON m."EspecialidadId" = e."id"
-            LEFT JOIN "citas" c ON c."medicoId" = m."id"
-            GROUP BY e."id", e."nombre"
-            ORDER BY e."nombre" ASC
-        `;
+        const resultado = await contarCitasPorEspecialidadModel();
         return res.status(200).json(resultado);
     } catch (error) {
         console.error("Error al generar reporte por especialidad:", error);
@@ -21,27 +14,14 @@ export const citasPorEspecialidad = async (_req: Request, res: Response) => {
     }
 };
 
-export const corteDiarioCitas = async (req: Request, res: Response) => {
-    const fecha = req.query.fecha;
-    if (typeof fecha !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-        return res.status(400).json({
-            mensaje: "Proporciona la fecha con formato YYYY-MM-DD"
-        });
-    }
-
+export const corteDiarioCitas = async (_req: Request, res: Response) => {
+    const fecha = res.locals.fechaCorte as string;
     const inicio = new Date(`${fecha}T00:00:00.000Z`);
-    if (Number.isNaN(inicio.getTime()) || inicio.toISOString().slice(0, 10) !== fecha) {
-        return res.status(400).json({ mensaje: "La fecha no es válida" });
-    }
     const fin = new Date(inicio);
     fin.setUTCDate(fin.getUTCDate() + 1);
 
     try {
-        const grupos = await prisma.cita.groupBy({
-            by: ["estado"],
-            where: { fechaHora: { gte: inicio, lt: fin } },
-            _count: { _all: true }
-        });
+        const grupos = await contarCitasDiariasModel(inicio, fin);
         const conteos = new Map(grupos.map(({ estado, _count }) => [estado, _count._all]));
         return res.status(200).json({
             fecha,

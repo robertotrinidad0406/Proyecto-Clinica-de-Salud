@@ -6,7 +6,7 @@ type DatosCrearMedico = {
     usuario: {
         nombre: string;
         apellido: string;
-        email?: string | null;
+        email: string;
         contrasena: string;
         telefono: string;
     };
@@ -77,7 +77,7 @@ export const crearMedicoModel = async (data: DatosCrearMedico) => {
             data: {
                 nombre: data.usuario.nombre,
                 apellido: data.usuario.apellido,
-                email: data.usuario.email ?? null,
+                email: data.usuario.email,
                 contrasena: data.usuario.contrasena,
                 telefono: data.usuario.telefono,
                 rol: "medico"

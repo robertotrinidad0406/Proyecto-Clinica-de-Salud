@@ -74,6 +74,144 @@ export const openApiSpec = {
                         }
                     }
                 }
+            },
+            PacienteRequest: {
+                type: "object",
+                required: ["nombre", "apellido", "fecha_de_nacimiento", "email"],
+                properties: {
+                    nombre: { type: "string", example: "Laura" },
+                    apellido: { type: "string", example: "Martínez" },
+                    fecha_de_nacimiento: { type: "string", format: "date", example: "1990-04-15" },
+                    email: { type: "string", format: "email", example: "laura@correo.com" }
+                }
+            },
+            PacienteExpediente: {
+                allOf: [
+                    { $ref: "#/components/schemas/Paciente" },
+                    {
+                        type: "object",
+                        properties: {
+                            citas: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    properties: {
+                                        id: { type: "integer", example: 30 },
+                                        fechaHora: { type: "string", format: "date-time" },
+                                        Motivo: { type: "string", example: "Consulta de seguimiento" },
+                                        estado: { type: "string", example: "completada" },
+                                        PacientesId: { type: "integer", example: 12 },
+                                        medicoId: { type: "integer", example: 6 },
+                                        medico: { $ref: "#/components/schemas/Medico" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            PacienteUpdateRequest: {
+                type: "object",
+                minProperties: 1,
+                properties: {
+                    nombre: { type: "string", example: "Laura" },
+                    apellido: { type: "string", example: "Martínez" },
+                    fecha_de_nacimiento: { type: "string", format: "date", example: "1990-04-15" },
+                    email: { type: "string", format: "email", example: "laura@correo.com" },
+                    createAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" }
+                }
+            },
+            Paciente: {
+                type: "object",
+                properties: {
+                    id: { type: "integer", example: 12 },
+                    nombre: { type: "string", example: "Laura" },
+                    apellido: { type: "string", example: "Martínez" },
+                    fecha_de_nacimiento: { type: "string", format: "date-time", example: "1990-04-15T00:00:00.000Z" },
+                    email: { type: "string", format: "email", example: "laura@correo.com" }
+                }
+            },
+            PacienteMutationResponse: {
+                type: "object",
+                properties: {
+                    message: { type: "string", example: "Paciente actualizado exitosamente" },
+                    paciente: { $ref: "#/components/schemas/Paciente" }
+                }
+            },
+            MedicoCreateRequest: {
+                type: "object",
+                required: ["NumeroLicencia", "usuario", "especialidad"],
+                properties: {
+                    NumeroLicencia: { type: "string", example: "MED-12345" },
+                    usuario: {
+                        type: "object",
+                        required: ["nombre", "apellido", "email", "contrasena", "telefono"],
+                        properties: {
+                            nombre: { type: "string", example: "Carlos" },
+                            apellido: { type: "string", example: "Ramírez" },
+                            email: { type: "string", format: "email", example: "carlos@clinica.com" },
+                            contrasena: { type: "string", format: "password", example: "PasswordSegura123" },
+                            telefono: { type: "string", example: "5551234567" }
+                        }
+                    },
+                    especialidad: {
+                        type: "object",
+                        required: ["nombre"],
+                        properties: {
+                            nombre: { type: "string", example: "Cardiología" },
+                            descripcion: { type: "string", example: "Atención cardiovascular" }
+                        }
+                    }
+                }
+            },
+            MedicoUpdateRequest: {
+                type: "object",
+                minProperties: 1,
+                properties: {
+                    NumeroLicencia: { type: "string", example: "MED-12345" },
+                    userId: { type: "integer", example: 4 },
+                    EspecialidadId: { type: "integer", example: 2 }
+                }
+            },
+            Medico: {
+                type: "object",
+                properties: {
+                    id: { type: "integer", example: 6 },
+                    NumeroLicencia: { type: "string", example: "MED-12345" },
+                    userId: { type: "integer", example: 4 },
+                    EspecialidadId: { type: "integer", example: 2 },
+                    createAt: { type: "string", format: "date-time" },
+                    updatedAt: { type: "string", format: "date-time" },
+                    user: {
+                        type: "object",
+                        properties: {
+                            id: { type: "integer", example: 4 },
+                            nombre: { type: "string", example: "Carlos" },
+                            apellido: { type: "string", example: "Ramírez" },
+                            email: { type: "string", format: "email", example: "carlos@clinica.com" },
+                            telefono: { type: "string", example: "5551234567" },
+                            rol: { type: "string", example: "medico" },
+                            createAt: { type: "string", format: "date-time" },
+                            updatedAt: { type: "string", format: "date-time" }
+                        }
+                    },
+                    especialidad: {
+                        type: "object",
+                        properties: {
+                            id: { type: "integer", example: 2 },
+                            nombre: { type: "string", example: "Cardiología" },
+                            descripcion: { type: "string", nullable: true, example: "Atención cardiovascular" }
+                        }
+                    }
+                }
+            },
+            MedicoMutationResponse: {
+                type: "object",
+                properties: {
+                    mensaje: { type: "string", example: "Médico actualizado correctamente" },
+                    medico: { $ref: "#/components/schemas/Medico" }
+                }
             }
         }
     },
@@ -251,12 +389,55 @@ export const openApiSpec = {
             get: {
                 summary: "Listar pacientes",
                 security: bearer,
-                responses: { "200": { description: "Lista de pacientes" } }
+                responses: {
+                    "200": {
+                        description: "Lista de pacientes",
+                        content: {
+                            "application/json": {
+                                schema: { type: "array", items: { $ref: "#/components/schemas/Paciente" } }
+                            }
+                        }
+                    }
+                }
             },
             post: {
                 summary: "Registrar paciente (recepción)",
                 security: bearer,
-                responses: { "201": { description: "Paciente creado" } }
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/PacienteRequest" },
+                            example: {
+                                nombre: "Laura",
+                                apellido: "Martínez",
+                                fecha_de_nacimiento: "1990-04-15",
+                                email: "laura@correo.com"
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    "201": {
+                        description: "Paciente creado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/PacienteMutationResponse" },
+                                example: {
+                                    message: "Paciente creado exitosamente",
+                                    paciente: {
+                                        id: 12,
+                                        nombre: "Laura",
+                                        apellido: "Martínez",
+                                        fecha_de_nacimiento: "1990-04-15T00:00:00.000Z",
+                                        email: "laura@correo.com"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": { description: "Datos del paciente inválidos" }
+                }
             }
         },
         "/api/pacientes/{id}": {
@@ -264,7 +445,75 @@ export const openApiSpec = {
                 summary: "Consultar expediente e historial de citas",
                 security: bearer,
                 parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
-                responses: { "200": { description: "Expediente del paciente" } }
+                responses: {
+                    "200": {
+                        description: "Expediente e historial de citas del paciente",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/PacienteExpediente" }
+                            }
+                        }
+                    },
+                    "404": { description: "Paciente no encontrado" }
+                }
+            },
+            put: {
+                summary: "Actualizar datos de un paciente (recepción)",
+                security: bearer,
+                parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/PacienteUpdateRequest" },
+                            example: { email: "laura.actualizada@correo.com" }
+                        }
+                    }
+                },
+                responses: {
+                    "200": {
+                        description: "Paciente actualizado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/PacienteMutationResponse" },
+                                example: {
+                                    message: "Paciente actualizado exitosamente",
+                                    paciente: {
+                                        id: 12,
+                                        nombre: "Laura",
+                                        apellido: "Martínez",
+                                        fecha_de_nacimiento: "1990-04-15",
+                                        email: "laura.actualizada@correo.com"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": { description: "ID o datos inválidos" },
+                    "404": { description: "Paciente no encontrado" },
+                    "409": { description: "No se puede actualizar el paciente por una referencia inválida" }
+                }
+            },
+            delete: {
+                summary: "Eliminar un paciente sin citas asociadas (recepción)",
+                security: bearer,
+                parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
+                responses: {
+                    "200": {
+                        description: "Paciente eliminado",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: { message: { type: "string", example: "Paciente eliminado exitosamente" } }
+                                },
+                                example: { message: "Paciente eliminado exitosamente" }
+                            }
+                        }
+                    },
+                    "404": { description: "Paciente no encontrado" },
+                    "409": { description: "El paciente tiene citas asociadas" }
+                }
             }
         },
         "/api/medicos": {
@@ -287,7 +536,184 @@ export const openApiSpec = {
                         }
                     }
                 ],
-                responses: { "200": { description: "Directorio médico" } }
+                responses: {
+                    "200": {
+                        description: "Directorio médico",
+                        content: {
+                            "application/json": {
+                                schema: { type: "array", items: { $ref: "#/components/schemas/Medico" } }
+                            }
+                        }
+                    }
+                }
+            },
+            post: {
+                summary: "Registrar médico (gerencia)",
+                security: bearer,
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/MedicoCreateRequest" },
+                            example: {
+                                NumeroLicencia: "MED-12345",
+                                usuario: {
+                                    nombre: "Carlos",
+                                    apellido: "Ramírez",
+                                    email: "carlos@clinica.com",
+                                    contrasena: "PasswordSegura123",
+                                    telefono: "5551234567"
+                                },
+                                especialidad: {
+                                    nombre: "Cardiología",
+                                    descripcion: "Atención cardiovascular"
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: {
+                    "201": {
+                        description: "Médico creado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/MedicoMutationResponse" },
+                                example: {
+                                    mensaje: "Médico creado correctamente",
+                                    medico: {
+                                        id: 6,
+                                        NumeroLicencia: "MED-12345",
+                                        userId: 4,
+                                        EspecialidadId: 2,
+                                        user: {
+                                            id: 4,
+                                            nombre: "Carlos",
+                                            apellido: "Ramírez",
+                                            email: "carlos@clinica.com",
+                                            telefono: "5551234567",
+                                            rol: "medico"
+                                        },
+                                        especialidad: {
+                                            id: 2,
+                                            nombre: "Cardiología",
+                                            descripcion: "Atención cardiovascular"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": { description: "Datos del médico inválidos" },
+                    "409": { description: "La licencia o el correo ya están registrados" }
+                }
+            }
+        },
+        "/api/medicos/{id}": {
+            get: {
+                summary: "Consultar médico por ID",
+                security: bearer,
+                parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
+                responses: {
+                    "200": {
+                        description: "Médico encontrado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Medico" },
+                                example: {
+                                    id: 6,
+                                    NumeroLicencia: "MED-12345",
+                                    userId: 4,
+                                    EspecialidadId: 2,
+                                    user: {
+                                        id: 4,
+                                        nombre: "Carlos",
+                                        apellido: "Ramírez",
+                                        email: "carlos@clinica.com",
+                                        telefono: "5551234567",
+                                        rol: "medico"
+                                    },
+                                    especialidad: {
+                                        id: 2,
+                                        nombre: "Cardiología",
+                                        descripcion: "Atención cardiovascular"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": { description: "ID inválido" },
+                    "404": { description: "Médico no encontrado" }
+                }
+            },
+            put: {
+                summary: "Actualizar médico (gerencia)",
+                security: bearer,
+                parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/MedicoUpdateRequest" },
+                            example: { EspecialidadId: 3 }
+                        }
+                    }
+                },
+                responses: {
+                    "200": {
+                        description: "Médico actualizado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/MedicoMutationResponse" },
+                                example: {
+                                    mensaje: "Médico actualizado correctamente",
+                                    medico: {
+                                        id: 6,
+                                        NumeroLicencia: "MED-12345",
+                                        userId: 4,
+                                        EspecialidadId: 3,
+                                        user: {
+                                            id: 4,
+                                            nombre: "Carlos",
+                                            apellido: "Ramírez",
+                                            email: "carlos@clinica.com",
+                                            telefono: "5551234567",
+                                            rol: "medico"
+                                        },
+                                        especialidad: {
+                                            id: 3,
+                                            nombre: "Neurología",
+                                            descripcion: "Atención neurológica"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": { description: "ID o datos inválidos" },
+                    "404": { description: "Médico no encontrado" },
+                    "409": { description: "Licencia o usuario ya registrados" }
+                }
+            },
+            delete: {
+                summary: "Eliminar médico sin citas asociadas (gerencia)",
+                security: bearer,
+                parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
+                responses: {
+                    "200": {
+                        description: "Médico eliminado",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: { mensaje: { type: "string", example: "Médico eliminado correctamente" } }
+                                },
+                                example: { mensaje: "Médico eliminado correctamente" }
+                            }
+                        }
+                    },
+                    "404": { description: "Médico no encontrado" },
+                    "409": { description: "El médico tiene citas asociadas" }
+                }
             }
         },
         "/api/citas": {

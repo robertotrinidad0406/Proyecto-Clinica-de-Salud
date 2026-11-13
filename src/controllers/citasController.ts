@@ -1,6 +1,13 @@
 import type { Request, Response } from "express";
 import { Prisma } from "../../generated/prisma/client.js";
-import prisma from "../db/prisma.js";
+import {
+    actualizarCitaProgramadaModel,
+    crearCitaModel,
+    listarAgendaMedicoModel,
+    obtenerCitaConPacienteModel,
+    obtenerCitaEstadoModel,
+    obtenerMedicoPorUsuarioModel
+} from "../models/citaModel.js";
 
 const esErrorPrisma = (error: unknown, code: string): boolean =>
     error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
@@ -14,23 +21,7 @@ export const agendarCita = async (req: Request, res: Response) => {
     };
 
     try {
-        const cita = await prisma.cita.create({
-            data: {
-                PacientesId: pacienteId,
-                medicoId,
-                fechaHora,
-                Motivo: motivo
-            },
-            include: {
-                Paciente: true,
-                medico: {
-                    include: {
-                        user: { select: { id: true, nombre: true, apellido: true } },
-                        especialidad: true
-                    }
-                }
-            }
-        });
+        const cita = await crearCitaModel({ pacienteId, medicoId, fechaHora, motivo });
         return res.status(201).json({ mensaje: "Cita agendada", cita });
     } catch (error) {
         if (esErrorPrisma(error, "P2002")) {
@@ -55,40 +46,12 @@ export const obtenerMiAgenda = async (req: Request, res: Response) => {
 
     const rango = res.locals.rangoAgenda as { desde: Date; hasta: Date } | undefined;
     try {
-        const medico = await prisma.medico.findUnique({
-            where: { userId: req.usuario.userId },
-            select: { id: true }
-        });
+        const medico = await obtenerMedicoPorUsuarioModel(req.usuario.userId);
         if (!medico) {
             return res.status(403).json({ mensaje: "El usuario no tiene un perfil médico" });
         }
 
-        const citas = await prisma.cita.findMany({
-            where: {
-                medicoId: medico.id,
-                ...(rango && { fechaHora: { gte: rango.desde, lt: rango.hasta } })
-            },
-            orderBy: [
-                { fechaHora: "asc" },
-                { Paciente: { apellido: "asc" } },
-                { Paciente: { nombre: "asc" } }
-            ],
-            include: {
-                Paciente: true,
-                medico: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                nombre: true,
-                                apellido: true
-                            }
-                        },
-                        especialidad: true
-                    }
-                }
-            }
-        });
+        const citas = await listarAgendaMedicoModel(medico.id, rango);
         return res.status(200).json(citas);
     } catch (error) {
         console.error("Error al consultar agenda médica:", error);
@@ -105,27 +68,14 @@ export const actualizarEstadoCita = async (req: Request, res: Response) => {
     const { estado } = req.body as { estado: "completada" | "cancelada" };
 
     try {
-        const medico = await prisma.medico.findUnique({
-            where: { userId: req.usuario.userId },
-            select: { id: true }
-        });
+        const medico = await obtenerMedicoPorUsuarioModel(req.usuario.userId);
         if (!medico) {
             return res.status(403).json({ mensaje: "El usuario no tiene un perfil médico" });
         }
 
-        const resultado = await prisma.cita.updateMany({
-            where: {
-                id: citaId,
-                medicoId: medico.id,
-                estado: "programada"
-            },
-            data: { estado }
-        });
+        const resultado = await actualizarCitaProgramadaModel(citaId, medico.id, estado);
         if (resultado.count === 0) {
-            const cita = await prisma.cita.findUnique({
-                where: { id: citaId },
-                select: { id: true, medicoId: true, estado: true }
-            });
+            const cita = await obtenerCitaEstadoModel(citaId);
             if (!cita) {
                 return res.status(404).json({ mensaje: "Cita no encontrada" });
             }
@@ -137,10 +87,7 @@ export const actualizarEstadoCita = async (req: Request, res: Response) => {
             });
         }
 
-        const citaActualizada = await prisma.cita.findUnique({
-            where: { id: citaId },
-            include: { Paciente: true }
-        });
+        const citaActualizada = await obtenerCitaConPacienteModel(citaId);
         return res.status(200).json({
             mensaje: "Estado de la cita actualizado",
             cita: citaActualizada

@@ -1,134 +1,108 @@
-import type { Request, Response } from 'express';
-import prisma from "../db/prisma.js"
+import type { Request, Response } from "express";
+import { Prisma } from "../../generated/prisma/client.js";
+import {
+    actualizarPacienteModel,
+    crearPacienteModel,
+    eliminarPacienteModel,
+    listarPacientesModel,
+    obtenerPacienteModel
+} from "../models/pacienteModel.js";
+
+const responderErrorPaciente = (
+    res: Response,
+    error: unknown,
+    operacion: string
+) => {
+    const mensajesError: Record<string, string> = {
+        crear: "Error al crear el paciente",
+        listar: "Error al listar los pacientes",
+        obtener: "Error al obtener el paciente",
+        actualizar: "Error al actualizar el paciente",
+        eliminar: "Error al eliminar el paciente"
+    };
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+            return res.status(404).json({ message: "Paciente no encontrado" });
+        }
+        if (error.code === "P2002") {
+            return res.status(409).json({ message: "Ya existe un paciente con esos datos" });
+        }
+        if (error.code === "P2003") {
+            const message = operacion === "eliminar"
+                ? "No se puede eliminar el paciente porque tiene citas asociadas"
+                : "Una referencia indicada no existe";
+            return res.status(409).json({ message });
+        }
+    }
+
+    console.error(`Error al ${operacion} paciente:`, error);
+    return res.status(500).json({
+        message: mensajesError[operacion] ?? "Error al procesar el paciente"
+    });
+};
 
 export const crearPaciente = async (req: Request, res: Response) => {
     try {
-        const {
+        const { nombre, apellido, fecha_de_nacimiento, email } = req.body;
+        const paciente = await crearPacienteModel({
             nombre,
             apellido,
             fecha_de_nacimiento,
             email
-        } = req.body;
-        const nuevoPaciente = await prisma.pacientes.create({
-            data: {
-                nombre,
-                apellido,
-                fecha_de_nacimiento: new Date(fecha_de_nacimiento),
-                email
-            }
         });
         return res.status(201).json({
-            message: 'Paciente creado exitosamente',
-            paciente: nuevoPaciente
+            message: "Paciente creado exitosamente",
+            paciente
         });
     } catch (error) {
-        console.error('Error al crear el paciente:', error);
-        return res.status(500).json({
-            message: 'Error al crear el paciente', error
-        });
+        return responderErrorPaciente(res, error, "crear");
     }
 };
 
-export const listarPacientes = async (req: Request, res: Response) => {
+export const listarPacientes = async (_req: Request, res: Response) => {
     try {
-        const pacientes = await prisma.pacientes.findMany();
-        return res.status(200).json(pacientes);
+        return res.status(200).json(await listarPacientesModel());
     } catch (error) {
-        console.error('Error al listar los pacientes:', error);
-        return res.status(500).json({
-            message: 'Error al listar los pacientes', error
-        });
+        return responderErrorPaciente(res, error, "listar");
     }
 };
 
 export const obtenerPaciente = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const paciente = await prisma.pacientes.findUnique({
-            where: { id: Number(id) },
-            include: {
-                citas: {
-                    orderBy: [
-                        { fechaHora: "desc" },
-                        { estado: "asc" }
-                    ],
-                    include: {
-                        medico: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        nombre: true,
-                                        apellido: true
-                                    }
-                                },
-                                especialidad: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        const paciente = await obtenerPacienteModel(Number(req.params.id));
         if (!paciente) {
-            return res.status(404).json({ message: 'Paciente no encontrado' });
+            return res.status(404).json({ message: "Paciente no encontrado" });
         }
         return res.status(200).json(paciente);
     } catch (error) {
-        console.error('Error al obtener el paciente:', error);
-        return res.status(500).json({
-            message: 'Error al obtener el paciente', error
-        });
+        return responderErrorPaciente(res, error, "obtener");
     }
 };
 
 export const actualizarPaciente = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        const {
-            nombre,
-            apellido,
-            fecha_de_nacimiento,
-            email
-        } = req.body;
-        const data = {
-            ...(nombre !== undefined && { nombre }),
-            ...(apellido !== undefined && { apellido }),
-            ...(fecha_de_nacimiento !== undefined && {
-                fecha_de_nacimiento: new Date(fecha_de_nacimiento)
-            }),
-            ...(email !== undefined && { email })
-        };
-        const pacienteActualizado = await prisma.pacientes.update({
-            where: { id: Number(id) },
-            data
-        });
+        const paciente = await actualizarPacienteModel(
+            Number(req.params.id),
+            req.body
+        );
         return res.status(200).json({
-            message: 'Paciente actualizado exitosamente',
-            paciente: pacienteActualizado
+            message: "Paciente actualizado exitosamente",
+            paciente
         });
     } catch (error) {
-        console.error('Error al actualizar el paciente:', error);
-        return res.status(500).json({
-            message: 'Error al actualizar el paciente', error
-        });
+        return responderErrorPaciente(res, error, "actualizar");
     }
 };
 
 export const eliminarPaciente = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
-        await prisma.pacientes.delete({
-            where: { id: Number(id) }
-        });
-        return res.status(200).json({ message: 'Paciente eliminado exitosamente' });
+        await eliminarPacienteModel(Number(req.params.id));
+        return res.status(200).json({ message: "Paciente eliminado exitosamente" });
     } catch (error) {
-        console.error('Error al eliminar el paciente:', error);
-        return res.status(500).json({
-            message: 'Error al eliminar el paciente', error
-        });
+        return responderErrorPaciente(res, error, "eliminar");
     }
-
-}
+};
 
 export default {
     crearPaciente,
