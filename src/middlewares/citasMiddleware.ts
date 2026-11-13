@@ -16,10 +16,12 @@ const estadoCitaSchema = z.object({
 });
 
 const idCitaSchema = z.coerce.number().int().positive();
-const rangoAgendaSchema = z.object({
-    desde: z.iso.date(),
-    hasta: z.iso.date()
-}).refine((rango) => rango.desde <= rango.hasta, {
+const fechasAgendaSchema = z.object({
+    desde: z.iso.date().optional(),
+    hasta: z.iso.date().optional()
+}).refine(({ desde, hasta }) => (desde === undefined) === (hasta === undefined), {
+    message: "Proporciona ambos parámetros, 'desde' y 'hasta'"
+}).refine(({ desde, hasta }) => desde === undefined || hasta === undefined || desde <= hasta, {
     message: "La fecha 'desde' debe ser anterior o igual a 'hasta'"
 });
 
@@ -57,20 +59,23 @@ export const validarIdCita: RequestHandler = (req, res, next) => {
 };
 
 export const validarRangoAgenda: RequestHandler = (req, res, next) => {
-    const resultado = rangoAgendaSchema.safeParse({
+    const resultado = fechasAgendaSchema.safeParse({
         desde: req.query.desde,
         hasta: req.query.hasta
     });
     if (!resultado.success) {
         return res.status(400).json({
-            mensaje: "Proporciona un rango válido usando fechas YYYY-MM-DD",
+            mensaje: "Proporciona ambos parámetros desde y hasta con fechas válidas YYYY-MM-DD",
             errores: resultado.error.issues
         });
     }
 
-    const desde = new Date(`${resultado.data.desde}T00:00:00.000Z`);
-    const hasta = new Date(`${resultado.data.hasta}T00:00:00.000Z`);
-    hasta.setUTCDate(hasta.getUTCDate() + 1);
-    res.locals.rangoAgenda = { desde, hasta };
+    if (resultado.data.desde && resultado.data.hasta) {
+        const desde = new Date(`${resultado.data.desde}T00:00:00.000Z`);
+        const hasta = new Date(`${resultado.data.hasta}T00:00:00.000Z`);
+        hasta.setUTCDate(hasta.getUTCDate() + 1);
+        res.locals.rangoAgenda = { desde, hasta };
+    }
+
     next();
 };

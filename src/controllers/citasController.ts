@@ -53,7 +53,7 @@ export const obtenerMiAgenda = async (req: Request, res: Response) => {
         return res.status(401).json({ mensaje: "Se requiere autenticación" });
     }
 
-    const rango = res.locals.rangoAgenda as { desde: Date; hasta: Date };
+    const rango = res.locals.rangoAgenda as { desde: Date; hasta: Date } | undefined;
     try {
         const medico = await prisma.medico.findUnique({
             where: { userId: req.usuario.userId },
@@ -66,7 +66,7 @@ export const obtenerMiAgenda = async (req: Request, res: Response) => {
         const citas = await prisma.cita.findMany({
             where: {
                 medicoId: medico.id,
-                fechaHora: { gte: rango.desde, lt: rango.hasta }
+                ...(rango && { fechaHora: { gte: rango.desde, lt: rango.hasta } })
             },
             orderBy: [
                 { fechaHora: "asc" },

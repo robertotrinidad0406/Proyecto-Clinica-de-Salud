@@ -19,11 +19,96 @@ export const openApiSpec = {
         schemas: {
             Error: {
                 type: "object",
-                properties: { mensaje: { type: "string" } }
+                properties: {
+                    mensaje: { type: "string" }
+                }
+            },
+            LoginRequest: {
+                type: "object",
+                required: ["email", "contrasena"],
+                properties: {
+                    email: { type: "string", format: "email", example: "ana@clinica.com" },
+                    contrasena: { type: "string", format: "password", example: "PasswordSegura123" }
+                }
+            },
+            LoginResponse: {
+                type: "object",
+                properties: {
+                    token: { type: "string", example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+                    usuario: {
+                        type: "object",
+                        properties: {
+                            id: { type: "integer", example: 3 },
+                            nombre: { type: "string", example: "Ana" },
+                            apellido: { type: "string", example: "García" },
+                            email: { type: "string", format: "email", example: "ana@clinica.com" },
+                            rol: { type: "string", example: "recepcionista" }
+                        }
+                    }
+                }
+            },
+            UsuarioRecepcionRequest: {
+                type: "object",
+                required: ["nombre", "apellido", "email", "telefono", "contrasena"],
+                properties: {
+                    nombre: { type: "string", example: "María" },
+                    apellido: { type: "string", example: "López" },
+                    email: { type: "string", format: "email", example: "maria@clinica.com" },
+                    telefono: { type: "string", example: "5551234567" },
+                    contrasena: { type: "string", format: "password", example: "PasswordSegura123" }
+                }
+            },
+            UsuarioRecepcionResponse: {
+                type: "object",
+                properties: {
+                    mensaje: { type: "string", example: "Usuario de recepción creado" },
+                    usuario: {
+                        type: "object",
+                        properties: {
+                            id: { type: "integer", example: 8 },
+                            nombre: { type: "string", example: "María" },
+                            apellido: { type: "string", example: "López" },
+                            email: { type: "string", example: "maria@clinica.com" },
+                            telefono: { type: "string", example: "5551234567" },
+                            rol: { type: "string", example: "recepcionista" }
+                        }
+                    }
+                }
             }
         }
     },
     paths: {
+        "/api/recepcion": {
+            get: {
+                summary: "Listar usuarios de recepción (gerencia)",
+                security: bearer,
+                responses: {
+                    "200": {
+                        description: "Usuarios de recepción",
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "array",
+                                    items: {
+                                        type: "object",
+                                        properties: {
+                                            id: { type: "integer", example: 8 },
+                                            nombre: { type: "string", example: "María" },
+                                            apellido: { type: "string", example: "López" },
+                                            email: { type: "string", format: "email", example: "maria@clinica.com" },
+                                            telefono: { type: "string", example: "5551234567" },
+                                            rol: { type: "string", example: "recepcionista" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": { description: "Se requiere un token válido" },
+                    "403": { description: "Solo gerencia puede consultar usuarios de recepción" }
+                }
+            }
+        },
         "/api/auth/login": {
             post: {
                 summary: "Iniciar sesión y obtener JWT",
@@ -31,27 +116,134 @@ export const openApiSpec = {
                     required: true,
                     content: {
                         "application/json": {
-                            schema: {
-                                type: "object",
-                                required: ["email", "contrasena"],
-                                properties: {
-                                    email: { type: "string", format: "email" },
-                                    contrasena: { type: "string", format: "password" }
+                            schema: { $ref: "#/components/schemas/LoginRequest" },
+                            examples: {
+                                loginValido: {
+                                    summary: "Credenciales válidas",
+                                    value: {
+                                        email: "ana@clinica.com",
+                                        contrasena: "PasswordSegura123"
+                                    }
                                 }
                             }
                         }
                     }
                 },
-                "/api/auth/usuarios/recepcion": {
-                    post: {
-                        summary: "Crear usuario de recepción (gerencia)",
-                        security: bearer,
-                        responses: { "201": { description: "Usuario creado" } }
+                responses: {
+                    "200": {
+                        description: "Sesión iniciada correctamente",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/LoginResponse" },
+                                examples: {
+                                    loginExitoso: {
+                                        summary: "Respuesta exitosa",
+                                        value: {
+                                            token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                            usuario: {
+                                                id: 3,
+                                                nombre: "Ana",
+                                                apellido: "García",
+                                                email: "ana@clinica.com",
+                                                rol: "recepcionista"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        description: "Credenciales incorrectas",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                                example: {
+                                    mensaje: "Correo o contraseña incorrectos"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        description: "Error de configuración o autenticación",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                                example: {
+                                    mensaje: "La autenticación no está configurada"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/usuarios/recepcion": {
+            post: {
+                summary: "Crear usuario de recepción (gerencia)",
+                security: bearer,
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: { $ref: "#/components/schemas/UsuarioRecepcionRequest" },
+                            examples: {
+                                crearRecepcionista: {
+                                    summary: "Usuarios de recepción",
+                                    value: {
+                                        nombre: "María",
+                                        apellido: "López",
+                                        email: "maria@clinica.com",
+                                        telefono: "5551234567",
+                                        contrasena: "PasswordSegura123"
+                                    }
+                                }
+                            }
+                        }
                     }
                 },
                 responses: {
-                    "200": { description: "Sesión iniciada" },
-                    "401": { description: "Credenciales incorrectas" }
+                    "201": {
+                        description: "Usuario de recepción creado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/UsuarioRecepcionResponse" },
+                                example: {
+                                    mensaje: "Usuario de recepción creado",
+                                    usuario: {
+                                        id: 8,
+                                        nombre: "María",
+                                        apellido: "López",
+                                        email: "maria@clinica.com",
+                                        telefono: "5551234567",
+                                        rol: "recepcionista"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        description: "Datos inválidos",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                                example: {
+                                    mensaje: "Los datos del usuario no son válidos"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        description: "Correo duplicado",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                                example: {
+                                    mensaje: "Ya existe un usuario con ese correo"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -113,10 +305,10 @@ export const openApiSpec = {
                 summary: "Consultar agenda del médico",
                 security: bearer,
                 parameters: [
-                    { name: "desde", in: "query", required: true, schema: { type: "string", format: "date" } },
-                    { name: "hasta", in: "query", required: true, schema: { type: "string", format: "date" } }
+                    { name: "desde", in: "query", required: false, schema: { type: "string", format: "date" } },
+                    { name: "hasta", in: "query", required: false, schema: { type: "string", format: "date" } }
                 ],
-                responses: { "200": { description: "Citas en el rango solicitado" } }
+                responses: { "200": { description: "Agenda completa o citas en el rango solicitado" } }
             }
         },
         "/api/citas/{id}/estado": {

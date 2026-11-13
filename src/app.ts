@@ -5,6 +5,7 @@ import medicoRoutes from "./routes/medicoRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import citasRoutes from "./routes/citasRoutes.js";
 import reportesRoutes from "./routes/reportesRoutes.js";
+import recepcionRoutes from "./routes/recepcionRoutes.js";
 import swaggerUi from "swagger-ui-express";
 import { openApiSpec } from "./docs/openApi.js";
 
@@ -26,5 +27,6 @@ app.use("/api/medicos", medicoRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/citas", citasRoutes);
 app.use("/api/reportes", reportesRoutes);
+app.use("/api/recepcion", recepcionRoutes);
 
 export default app;
